@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import 'react-quill/dist/quill.snow.css';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: content-box;
+}
+
+body {
+  min-height: 100vh;
+  font-family: 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  font-size: 2rem;
+  padding: 0.5rem;
+  background-color: #007ACC;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+aside {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+footer {
+  position: sticky;
+  bottom: 0;
+  background-color: #007ACC;
+  font-size: 1.5rem;
+  padding: 0.5rem;
+  display: grid;
+  place-content: center;
+  z-index: 40;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
