@@ -9,7 +9,9 @@ Eine Full-Stack-Notizen-App, entwickelt mit **Django**, **React**, **PostgreSQL*
 
 ## 🔗 Live-Demo
 
-Demnächst verfügbar — Backend auf AWS EC2, Frontend auf Netlify
+🌐 **Frontend:** [https://unrivaled-pothos-8ffba4.netlify.app](https://unrivaled-pothos-8ffba4.netlify.app)
+
+🔙 **Backend:** Gehostet auf AWS EC2 mit HTTPS & NGINX-Reverse-Proxy
 
 ---
 
@@ -173,7 +175,7 @@ Stelle sicher, dass du diese Dateien aktualisierst, wenn du Frontend und Backend
 ```python
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
-    'https://<dein-netlify-projekt>.netlify.app',  # Ersetze dies durch deine eigene Netlify-Domain
+    'https://unrivaled-pothos-8ffba4.netlify.app',  # Ersetze mit deiner echten Domain
 ]
 
 ALLOWED_HOSTS = [
@@ -193,7 +195,7 @@ touch frontend/.env
 Füge dann deine Backend-API-URL wie folgt ein:
 
 ```env
-REACT_APP_API_URL=http://<deine-ec2-ip>:8000/api/
+REACT_APP_API_URL=https://dein-domain.duckdns.org/api/
 ```
 
 🧠 Hinweis: Diese Variable wird im Frontend-Code so verwendet:
@@ -238,6 +240,15 @@ server {
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     location /api/ {
+        if ($request_method = OPTIONS) {
+            # Ersetze mit deiner echten Netlify-Domain
+            add_header 'Access-Control-Allow-Origin' 'https://unrivaled-pothos-8ffba4.netlify.app' always; 
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type' always;
+            add_header 'Access-Control-Max-Age' 3600 always;
+            return 204;
+        }
+
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

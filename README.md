@@ -9,7 +9,9 @@ A full-stack Notes App built with **Django**, **React**, **PostgreSQL**, and **D
 
 ## 🔗 Live Demo
 
-Coming soon — deploying to AWS EC2 (backend) and Netlify (frontend)
+🌐 **Frontend:** [https://unrivaled-pothos-8ffba4.netlify.app](https://unrivaled-pothos-8ffba4.netlify.app)
+
+🔙 **Backend:** Deployed on AWS EC2 with HTTPS & NGINX reverse proxy  
 
 ---
 
@@ -173,7 +175,7 @@ Make sure to update these files when deploying the frontend and backend to diffe
 ```python
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
-    'https://<your-netlify-site>.netlify.app',  # Replace with your actual frontend domain
+    'https://unrivaled-pothos-8ffba4.netlify.app',  # Replace with your actual frontend domain
 ]
 
 ALLOWED_HOSTS = [
@@ -193,7 +195,7 @@ touch frontend/.env
 Then add your backend API URL like this:
 
 ```env
-REACT_APP_API_URL=http://<your-ec2-ip>:8000/api/
+REACT_APP_API_URL=https://your-domain.duckdns.org/api/
 ```
 
 🧠 Note: This value is used in the frontend code via:
@@ -238,6 +240,15 @@ server {
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     location /api/ {
+        if ($request_method = OPTIONS) {
+            # Replace with your actual frontend domain
+            add_header 'Access-Control-Allow-Origin' 'https://unrivaled-pothos-8ffba4.netlify.app' always; 
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type' always;
+            add_header 'Access-Control-Max-Age' 3600 always;
+            return 204;
+        }
+
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -247,7 +258,7 @@ server {
 }
 ```
 
-### 2. Install Certbot SSL
+### 2. Create an SSL Certificate with Certbot
 
 ```bash
 sudo apt install certbot python3-certbot-nginx
