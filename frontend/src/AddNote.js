@@ -12,11 +12,11 @@ const AddNote = ({ API }) => {
 
   const addNote = async() => {
     try {
-      await axios.post(`${API}notes/create`, newNote, {
+      await axios.post(`${API}notes/create/`, newNote, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNewNote({ title: "", content: "" });      
-      navigate("/notes");
+      navigate("/notes/");
     } catch(error) {
       console.error("Error adding note:", error);
     }

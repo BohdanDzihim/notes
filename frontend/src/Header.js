@@ -17,7 +17,7 @@ const Header = ({ sidebarOpen, setSidebarOpen, isNotesRoot }) => {
       >
         <FaBars />
       </button>}
-      <a href="/notes">Notes App</a>
+      <a href="/notes/">Notes App</a>
       <button
           className="pointer bg-transparent border-none text-2xl p-2 m-0 transition ease-in-out duration-200 hover:scale-110"
           onClick={() => {

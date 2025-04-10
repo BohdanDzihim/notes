@@ -7,7 +7,7 @@ const NotesList = ({ notes }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate('/notes/create')
+    navigate('/notes/create/')
   }
 
   return (

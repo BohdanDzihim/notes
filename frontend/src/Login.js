@@ -18,7 +18,7 @@ const Login = ({ API }) => {
   const handleLogin = async(e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(`${API}login`, credentials);
+      const response = await axios.post(`${API}login/`, credentials);
       if (response.data.tokens && response.data.tokens.access) {
         const accessToken = response.data.tokens.access;
         const refreshToken = response.data.tokens.refresh;
@@ -60,7 +60,7 @@ const Login = ({ API }) => {
             onChange={handleChange}
           />
           <button className="w-full text-2xl p-3 rounded-md bg-blue-600 text-white cursor-pointer font-bold transition-all duration-300 hover:bg-blue-700 hover:shadow-md" type="submit">Login</button>
-          <Link to="/notes" className="flex items-center text-blue-600 hover:text-blue-700 hover:underline text-sm mt-4"><FaArrowLeft className="mr-1" />Back to the homepage</Link>
+          <Link to="/" className="flex items-center text-blue-600 hover:text-blue-700 hover:underline text-sm mt-4"><FaArrowLeft className="mr-1" />Back to the homepage</Link>
         </form>
       </main>
       <footer>&#0169; 2025</footer>

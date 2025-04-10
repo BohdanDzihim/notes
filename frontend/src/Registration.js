@@ -15,12 +15,12 @@ const Registration = ({ API }) => {
   const handleRegistration = async(e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(`${API}register`, {
+      const response = await axios.post(`${API}register/`, {
         username: username, email: email, password: password, password2: password2
       });
       if (response.data.username) {
         try {
-          const loginResponse = await axios.post(`${API}login`, {username, password})
+          const loginResponse = await axios.post(`${API}login/`, {username, password})
           if (loginResponse.data.tokens && loginResponse.data.tokens.access) {
             const accessToken = loginResponse.data.tokens.access;
             const refreshToken = loginResponse.data.tokens.refresh;
@@ -89,7 +89,7 @@ const Registration = ({ API }) => {
             onChange={(e) => setPassword2(e.target.value)}
           />
           <button type="submit" className="w-full text-2xl p-3 rounded-md bg-blue-600 text-white cursor-pointer font-bold transition-all duration-300 hover:bg-blue-700 hover:shadow-md">Register</button>
-          <Link to="/notes" className="flex items-center text-blue-600 hover:text-blue-700 hover:underline text-sm mt-4"><FaArrowLeft className="mr-1" />Back to the homepage</Link>
+          <Link to="/" className="flex items-center text-blue-600 hover:text-blue-700 hover:underline text-sm mt-4"><FaArrowLeft className="mr-1" />Back to the homepage</Link>
         </form>
       </main>
       <footer>&#0169; 2025</footer>

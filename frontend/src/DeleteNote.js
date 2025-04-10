@@ -13,7 +13,7 @@ const DeleteNote = ({ API }) => {
     e.preventDefault();
     try {
       await axios.delete(`${API}notes/delete/${note.id}`, { headers: { Authorization: `Bearer ${token}` }, data: note });
-      navigate("/notes");
+      navigate("/notes/");
     } catch (error) {
       console.error("Error deliting note:", error);
     }
