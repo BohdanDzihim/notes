@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 
-const Pagination = ({ totalNotes, fetchNotes, limit, setLimit, offset, setOffset }) => {
+const Pagination = ({ totalNotes, limit, setLimit, offset, setOffset }) => {
   const totalPages = Math.ceil(totalNotes / limit);
   const currentpage = Math.floor(offset / limit) + 1;
 
@@ -9,15 +9,10 @@ const Pagination = ({ totalNotes, fetchNotes, limit, setLimit, offset, setOffset
     setOffset(newOffset);
   };
 
-  useEffect(() => {
-    sessionStorage.setItem("limit", limit);
-    sessionStorage.setItem("offset", offset);
-    fetchNotes();
-  }, [limit, offset, fetchNotes]);
-
   return (
     <>
-      <span className="flex gap-2 justify-center mb-1 -mt-4">
+      {totalPages > 0 && <>
+        <span className="flex gap-2 justify-center mb-1 -mt-4">
         <button className="px-3 py-1 rounded bg-white border" disabled={currentpage === 1} onClick={() => goToPage(currentpage - 1)}>Previous</button>
         {Array.from({ length: totalPages }).map((_, i) => (
           <button
@@ -49,6 +44,7 @@ const Pagination = ({ totalNotes, fetchNotes, limit, setLimit, offset, setOffset
           <option value="100">100</option>
         </select>
       </span>
+      </>}
     </>
   )
 }

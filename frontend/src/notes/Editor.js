@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import api from '../hooks/api';
 
-const Editor = ({ API_BASE_URL, value, onChange }) => {
+const Editor = ({ value, onChange }) => {
   const [editorValue, setEditorValue] = useState(value || "");
 
   const handleImageUpload = useCallback(() => {
@@ -19,24 +20,14 @@ const Editor = ({ API_BASE_URL, value, onChange }) => {
       formData.append("image", file);
 
       try {
-        const response = await fetch(`${API_BASE_URL}upload-image`, {
-          method: "POST",
-          body: formData,
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`
-          },
-          timeout: 3000,
-        });
-
-        const data = await response.json();
-        const imageUrl = data.image_url;
-
+        const response = await api.post(`upload-image/`, formData);
+        const imageUrl = response.data.image_url;
         setEditorValue((prev) => prev + `<img src="${imageUrl}" alt="uploaded image"/>`);
       } catch (error) {
         console.error("Image upload failed:", error);
       }
     };
-  }, [API_BASE_URL]);
+  }, []);
 
   const quillModules = {
     toolbar: {

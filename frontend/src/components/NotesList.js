@@ -1,5 +1,5 @@
 import React from 'react';
-import LineNote from './LineNote';
+import LineNote from '../notes/LineNote';
 import { FaPlus } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 

@@ -195,15 +195,11 @@ touch frontend/.env
 Then add your backend API URL like this:
 
 ```env
-REACT_APP_API_URL=https://your-domain.duckdns.org/api/
+REACT_APP_API_URL=https://your-domain.duckdns.org/api
 ```
 
-🧠 Note: This value is used in the frontend code via:
-
-```js
-const API = process.env.REACT_APP_API_URL;
-```
-So there's no need to modify any JS files — just update the .env.
+🧠 Note: This environment variable is used directly in the code (in src/hooks/api.js).
+There’s no need to modify any JavaScript files — just update the .env file.
 
 ### ⚙️ Rebuild the Frontend
 After setting the .env, run the production build:

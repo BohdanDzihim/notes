@@ -1,10 +1,11 @@
-import React from 'react';
-import axios from 'axios';
-import { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
+import api from '../hooks/api';
+import { AuthContext } from '../context/AuthContext';
 
-const Registration = ({ API }) => {
+const Registration = () => {
+  const { setIsAuthenticated } = useContext(AuthContext);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,29 +16,22 @@ const Registration = ({ API }) => {
   const handleRegistration = async(e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(`${API}register/`, {
+      await api.post(`register/`, {
         username: username, email: email, password: password, password2: password2
       });
-      if (response.data.username) {
-        try {
-          const loginResponse = await axios.post(`${API}login/`, {username, password})
-          if (loginResponse.data.tokens && loginResponse.data.tokens.access) {
-            const accessToken = loginResponse.data.tokens.access;
-            const refreshToken = loginResponse.data.tokens.refresh;
-            const username = loginResponse.data.username;
-            localStorage.setItem("username", username);
-            localStorage.setItem("refreshToken", refreshToken);
-            localStorage.setItem("accessToken", accessToken);
-            navigate("/notes");
-          } else {
-            setError("Login failed. No access token received.");
-          }
-        } catch(error) {
-          console.error("Login Error:", error.response ? error.response.data : error);
-          setError("Invalid username or password");
+      try {
+        const loginResponse = await api.post(`login/`, {username, password})
+        if (loginResponse.data.access_token) {
+          const username = loginResponse.data.username;
+          localStorage.setItem("username", username);
+          setIsAuthenticated(true);
+          navigate("/notes/");
+        } else {
+          setError("Login failed. No access token received.");
         }
-      } else {
-        setError("Registration failed");
+      } catch(error) {
+        console.error("Login Error:", error.response ? error.response.data : error);
+        setError("Invalid username or password");
       }
     } catch(error) {
       console.error("Registration Error:", error.response ? error.response.data : error);

@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaSearch, FaCalendarAlt } from 'react-icons/fa';
-import axios from 'axios';
+import api from '../hooks/api';
 
-const FilterNotes = ({ API_BASE_URL, setNotes, setTotalNotes }) => {
-  const token = localStorage.getItem("accessToken");
-
+const FilterNotes = ({ setNotes, setTotalNotes }) => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [date, setDate] = useState("");
@@ -18,15 +16,14 @@ const FilterNotes = ({ API_BASE_URL, setNotes, setTotalNotes }) => {
     if (date) params.append("date", date);
 
     if (params) {
-      axios.get(`${API_BASE_URL}notes?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).then((response) => {
+      try {
+        const response = await api.get(`notes/?${params.toString()}`);
         setNotes(response.data.results);
         setTotalNotes(response.data.count);
-        navigate(`/notes?${params}`);
-      }).catch((err) => {
+        navigate(`/notes/?${params}`);
+      } catch(err) {
         console.error(err);
-      })
+      }
     }
   }
   

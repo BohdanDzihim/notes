@@ -1,12 +1,12 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.contrib.auth import authenticate
 from django.db.models import Q
 from rest_framework_simplejwt.tokens import RefreshToken
 from notes.models import Note
-from .serializers import NotesSerializer, RegisterSerializer, LoginSerializer, LogoutSerializer
-from rest_framework import generics, status
+from .serializers import NotesSerializer, RegisterSerializer, UserSerializer, MyTokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework import generics
 from rest_framework.permissions import AllowAny
 from storages.backends.s3boto3 import S3Boto3Storage
 from datetime import timedelta
@@ -21,61 +21,112 @@ AWS_STORAGE_BUCKET_NAME = 's3-bucket-for-notes-app'
 class APIOverview(generics.RetrieveAPIView):
   def get(self, request):
     api_urls = {
-      'Registration': '/register',
-      'Login': '/login',
-      'Logout': '/logout',
-      'Token_refresh': '/token/refresh',
-      'All_notes': '/notes',
-      'Note_detail': '/notes/pk',
-      'Add': '/notes/create',
-      'Update': '/notes/update/pk',
-      'Delete': '/notes/delete/pk'
+      'Registration': '/register/',
+      'Login': '/login/',
+      'Logout': '/logout/',
+      'Token_refresh': '/token/refresh/',
+      'All_notes': '/notes/',
+      'Note_detail': '/notes/pk/',
+      'Add': '/notes/create/',
+      'Update': '/notes/update/pk/',
+      'Delete': '/notes/delete/pk/',
+      'Upload image': '/upload-image/',
     }
-
     return Response(api_urls, status=200)
 
-class RegisterView(generics.GenericAPIView):
+class RegisterView(generics.CreateAPIView):
   permission_classes = [AllowAny]
   serializer_class = RegisterSerializer
   def post(self, request):
-    user = request.data
-    serializer = self.serializer_class(data=user)
+    serializer = self.get_serializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    serializer.save()
-    user_data = serializer.data
-    return Response(user_data, status=201)
+    user = serializer.save()
 
-class LoginView(generics.GenericAPIView):
-    permission_classes = [AllowAny]
-    serializer_class = LoginSerializer
+    refresh = RefreshToken.for_user(user)
 
-    def post(self, request):
-        username = request.data.get("username")
-        password = request.data.get("password")
+    return Response({
+      "user": UserSerializer(user).data,
+      "refresh": str(refresh),
+      "access": str(refresh.access_token),
+    }, status=201)
+  
+class MyObtainTokenPairView(TokenObtainPairView):
+  serializer_class = MyTokenObtainPairSerializer
 
-        user = authenticate(username=username, password=password)
+  def post(self, request, *args, **kwargs):
+    serializer = self.get_serializer(data=request.data)
 
-        if user is None:
-            return Response({"error": "Invalid username or password"}, status=status.HTTP_401_UNAUTHORIZED)
+    try:
+      serializer.is_valid(raise_exception=True)
+    except Exception as e:
+      return Response({"detail": "Invalid credentials"}, status=401)
+    
+    user = serializer.user
+    username = user.username
+    access_token = serializer.validated_data.get("access")
+    refresh_token = serializer.validated_data.get("refresh")
 
-        refresh = RefreshToken.for_user(user)
-        access_token = str(refresh.access_token)
+    response = Response({"message": "Login successful", 
+                         "username": username, 
+                         "access_token": access_token, 
+                         "refresh_token": refresh_token}, status=200)
 
-        return Response({
-            "username": user.username,
-            "tokens": {
-                "refresh": str(refresh),
-                "access": access_token
-            }
-        }, status=200)
+    response.set_cookie(
+      key='access_token',
+      value=access_token,
+      httponly=True,
+      secure=True,
+      samesite='None',
+    )
 
-class LogoutView(generics.GenericAPIView):
-  serializer_class = LogoutSerializer
+    response.set_cookie(
+      key='refresh_token',
+      value=refresh_token,
+      httponly=True,
+      secure=True,
+      samesite='None',
+    )
+
+    return response
+
+class CustomTokenRefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.COOKIES.get("refresh_token")
+
+        if not refresh_token:
+          return Response({"error": "No refresh token in cookies"}, status=400)
+
+        request.data["refresh"] = refresh_token
+
+        response = super().post(request, *args, **kwargs)
+        
+        if response.status_code == 200:
+            access_token = response.data.get("access")
+            response.set_cookie(
+                key="access_token",
+                value=access_token,
+                httponly=True,
+                secure=True,
+                samesite="None",
+            )
+        return response
+
+class LogoutView(APIView):
   def post(self, request):
-    serializer = self.serializer_class(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
-    return Response(status=204)
+    refresh_token = request.COOKIES.get("refresh_token")
+    if not refresh_token:
+      return Response({"detail": "Refresh token is missing"}, status=400)
+    
+    try:
+      token = RefreshToken(refresh_token)
+      token.blacklist()
+    except Exception as e:
+      pass
+
+    response = Response({"message": "Logout successful"}, status=200)
+    response.delete_cookie("access_token", samesite="None")
+    response.delete_cookie("refresh_token", samesite="None")
+    return response
 
 class SearchView(generics.ListAPIView):
   serializer_class = NotesSerializer
@@ -83,7 +134,7 @@ class SearchView(generics.ListAPIView):
   
   def get_queryset(self):
     user = self.request.user
-    queryset = Note.objects.filter(user=user).all()
+    queryset = Note.objects.filter(user=user).order_by('-created_date')
     search = self.request.query_params.get('search')
     date = self.request.query_params.get('date')
     if search is not None:
@@ -106,34 +157,20 @@ class SearchView(generics.ListAPIView):
     return queryset
 
 class DetailView(generics.RetrieveAPIView):
-  def get(self, request, pk):
-    try:
-      user = request.user
-      note = Note.objects.filter(user=user).get(id=pk)
-    except Note.DoesNotExist:
-      return Response({"error": "Note not found or not allowed"}, status=404)
-    
-    serializer = NotesSerializer(note)
-    return Response(serializer.data, status=200)
+  serializer_class = NotesSerializer
+  def get_queryset(self):
+    return Note.objects.filter(user=self.request.user)
 
 class CreateView(generics.CreateAPIView):
   serializer_class = NotesSerializer
-  def create(self, request):
-    serializer = self.serializer_class(data=request.data)
-    serializer.is_valid(raise_exception=True)
+
+  def perform_create(self, serializer):
     serializer.save(user=self.request.user)
-    return Response(serializer.data, status=201)
   
 class UpdateView(generics.RetrieveUpdateAPIView):
-  queryset = Note.objects.all()
   serializer_class = NotesSerializer
-  def update(self, request, pk):
-    user = request.user
-    serializer = self.serializer_class(Note.objects.filter(user=user).get(id=pk), data=request.data, partial=True)
-    if serializer.is_valid():
-      serializer.save()
-      return Response(serializer.data)
-    return Response(serializer.errors, status=400)
+  def get_queryset(self):
+    return Note.objects.filter(user=self.request.user)
 
 def extract_image_urls_from_html(html):
   return re.findall(r'<img[^>]+src="([^"]+)"', html)
@@ -143,9 +180,7 @@ def extract_s3_key(image_url):
   return match.group(0) if match else None
 
 def delete_image_from_s3(s3_key):
-  s3 = boto3.client('s3', 
-                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
+  s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
   
   try:
     s3.delete_object(Bucket=AWS_STORAGE_BUCKET_NAME, Key=s3_key)
@@ -153,36 +188,33 @@ def delete_image_from_s3(s3_key):
   except Exception as e:
     print(f"Error deleting from S3: {e}")
 
-class DeleteView(generics.RetrieveDestroyAPIView):
-  queryset = Note.objects.all()
-  serializer_class = NotesSerializer
-  def delete(self, request, pk):
-    user = request.user
-    note = Note.objects.filter(user=user).get(id=pk)
-    image_urls = extract_image_urls_from_html(note.content)
-    for url in image_urls:
-      s3_key = extract_s3_key(url)
-      if s3_key:
-        delete_image_from_s3(s3_key)
-    note.delete()
-    return Response({"message": "Note deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+def is_image_used_elsewhere(current_note, image_url):
+    return Note.objects.exclude(id=current_note.id).filter(content__icontains=image_url).exists()
 
+class DeleteView(generics.RetrieveDestroyAPIView):
+  serializer_class = NotesSerializer
+  def get_queryset(self):
+    return Note.objects.filter(user=self.request.user)
+  def perform_destroy(self, instance):
+    image_urls = extract_image_urls_from_html(instance.content)
+    for url in image_urls:
+      if not is_image_used_elsewhere(instance, url):
+        s3_key = extract_s3_key(url)
+        if s3_key:
+          delete_image_from_s3(s3_key)
+    return super().perform_destroy(instance)
+  
 class S3Storage(S3Boto3Storage):
   location = "media/"
 
 class ImageUploadView(APIView):
-    parser_classes = (MultiPartParser, FormParser)
+  parser_classes = (MultiPartParser, FormParser)
 
-    def post(self, request, *args, **kwargs):
-        
-        if 'image' not in request.FILES:
-            return Response({"error": "No image file found"}, status=400)
-
-        file = request.FILES['image']
-
-        storage = S3Storage()
-        file_name = storage.save(f"{file.name}", file)
-        file_url = storage.url(file_name)
-        
-        return Response({"image_url": file_url}, status=201)
-
+  def post(self, request, *args, **kwargs):
+    if 'image' not in request.FILES:
+      return Response({"error": "No image file found"}, status=400)
+    file = request.FILES['image']
+    storage = S3Storage()
+    file_name = storage.save(f"{file.name}", file)
+    file_url = storage.url(file_name)
+    return Response({"image_url": file_url}, status=201)

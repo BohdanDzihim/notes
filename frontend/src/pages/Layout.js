@@ -1,47 +1,63 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useContext, useEffect, useRef } from 'react';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
-import axios from 'axios';
-import Header from './Header';
-import Sidebar from './Sidebar';
-import Footer from './Footer';
+import api from '../hooks/api';
+import Header from '../components/Header';
+import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
+import { AuthContext } from '../context/AuthContext';
 
-const Layout = ( {API} ) => {
+const Layout = () => {
   const [totalNotes, setTotalNotes] = useState(0);
   const [notes, setNotes] = useState([]);
   const [limit, setLimit] = useState(() => Number(sessionStorage.getItem("limit")) || 10);
   const [offset, setOffset] = useState(() => Number(sessionStorage.getItem("offset")) || 0);
-  const token = localStorage.getItem("accessToken");
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const isNotesRoot = location.pathname === "/notes";
-  
-  const fetchNotes = useCallback(async() => {
-    try {
-      const params = new URLSearchParams();
-      params.append("limit", limit);
-      params.append("offset", offset);
-      sessionStorage.setItem("limit", limit);
-      sessionStorage.setItem("offset", offset);
+  const isNotesRoot = location.pathname === "/notes/";
+  const { setIsAuthenticated } = useContext(AuthContext);
+  const isRefreshing = useRef(false);
 
-      const response = await axios.get(params ? `${API}notes?${params.toString()}` : `${API}notes`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+  const fetchNotes = useCallback(async () => {
+    const params = new URLSearchParams();
+    params.append("limit", limit);
+    params.append("offset", offset);
+    sessionStorage.setItem("limit", limit);
+    sessionStorage.setItem("offset", offset);
+
+    try {
+      const response = await api.get(`notes/?${params.toString()}`);
       setNotes(response.data.results);
       setTotalNotes(response.data.count);
-    } catch(error) {
-      console.error("Error fetching notes:", error);
-      if (error.response && error.response.status === 401) {
-        localStorage.removeItem("accessToken");
-        navigate("/");
+      setIsAuthenticated(true);
+    } catch (error) {
+      if (error.response?.status === 401) {
+        if (!isRefreshing.current) {
+          isRefreshing.current = true;
+          try {
+            await api.post("token/refresh/");
+            const retry = await api.get(`notes/?${params.toString()}`);
+            setNotes(retry.data.results);
+            setTotalNotes(retry.data.count);
+            setIsAuthenticated(true);
+          } catch {
+            localStorage.removeItem("username");
+            setIsAuthenticated(false);
+            navigate("/");
+          } finally {
+            isRefreshing.current = false;
+          }
+        }
+      } else {
+        setIsAuthenticated(false);
       }
-    };
-  }, [API, limit, offset, token, navigate])
-  
-  useEffect(() => {
-    if (token) fetchNotes();
-  }, [fetchNotes, token]);
+    }
+  }, [limit, offset, navigate, setIsAuthenticated]);
 
+  useEffect(() => {
+    fetchNotes();
+  }, [fetchNotes]);
+  
   return (
     <div className="flex flex-col min-h-screen">
       <Header 
@@ -61,12 +77,10 @@ const Layout = ( {API} ) => {
           `}
         >
           <Sidebar
-            API={API}
             notes={notes}
             setNotes={setNotes}
             totalNotes={totalNotes}
             setTotalNotes={setTotalNotes}
-            fetchNotes={fetchNotes}
             limit={limit}
             setLimit={setLimit}
             offset={offset}

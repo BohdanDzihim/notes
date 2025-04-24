@@ -1,15 +1,14 @@
 import React from 'react';
 import NotesList from './NotesList';
-import FilterNotes from './FilterNotes';
-import Pagination from './Pagination';
+import FilterNotes from '../notes/FilterNotes';
+import Pagination from '../notes/Pagination';
 
-const Sidebar = ({ API, notes, setNotes, totalNotes, setTotalNotes, fetchNotes, limit, setLimit, offset, setOffset }) => {
+const Sidebar = ({ notes, setNotes, totalNotes, setTotalNotes, limit, setLimit, offset, setOffset }) => {
   return (
     <>
       <aside>
         <h1 className="text-4xl font-bold">Hello, {localStorage.getItem("username")}</h1>
         <FilterNotes 
-          API={API}
           setNotes={setNotes} 
           setTotalNotes={setTotalNotes} 
         />
@@ -18,7 +17,6 @@ const Sidebar = ({ API, notes, setNotes, totalNotes, setTotalNotes, fetchNotes, 
         />
         <Pagination
           totalNotes={totalNotes} 
-          fetchNotes={fetchNotes}
           limit={limit}
           setLimit={setLimit}
           offset={offset}

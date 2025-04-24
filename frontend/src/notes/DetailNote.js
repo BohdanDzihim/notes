@@ -16,7 +16,7 @@ const DetailNote = () => {
         <QuillViewer
           content={note.content}
         />
-        <Link to="/notes" className="flex items-center text-blue-600 hover:text-blue-700 hover:underline text-sm mt-4"><FaArrowLeft className="mr-1" />Back to the notes</Link>
+        <Link to="/notes/" className="flex items-center text-blue-600 hover:text-blue-700 hover:underline text-sm mt-4"><FaArrowLeft className="mr-1" />Back to the notes</Link>
       </main>
     </div>
   )

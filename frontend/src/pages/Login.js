@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
 import { FaArrowLeft } from 'react-icons/fa';
+import api from '../hooks/api';
+import { AuthContext } from '../context/AuthContext';
 
-const Login = ({ API }) => {
+const Login = () => {
+  const { setIsAuthenticated } = useContext(AuthContext)
   const [credentials, setCredentials] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -18,18 +20,11 @@ const Login = ({ API }) => {
   const handleLogin = async(e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(`${API}login/`, credentials);
-      if (response.data.tokens && response.data.tokens.access) {
-        const accessToken = response.data.tokens.access;
-        const refreshToken = response.data.tokens.refresh;
-        const username = response.data.username;
-        localStorage.setItem("username", username);
-        localStorage.setItem("refreshToken", refreshToken);
-        localStorage.setItem("accessToken", accessToken);
-        navigate("/notes");
-      } else {
-        setError("Login failed. No access token received.");
-      }
+      const loginResponse = await api.post(`login/`, credentials);
+      const username = loginResponse.data.username;
+      localStorage.setItem("username", username);
+      setIsAuthenticated(true);
+      navigate("/notes/");
     } catch(error) {
       console.error("Login Error:", error.response ? error.response.data : error);
       setError("Invalid username or password");
